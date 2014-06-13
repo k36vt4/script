@@ -1,0 +1,73 @@
+--[[
+
+	Auto Darius v1.1
+	by x7x/Anonymous
+	use with lux's "Darius Dunk" :)
+
+]]
+
+--require "BugsplatAvoider" do return AvoidBugsplats() end
+
+local player = GetMyHero()
+local ts = TargetSelector(TARGET_LOW_HP,650,DAMAGE_PHYSICAL,true)
+local NextAction = 0
+local UltTick = 0
+local hotKey = 32 -- Space
+
+if myHero.charName == "Darius" then
+	
+	function OnLoad()
+		DConfig = scriptConfig("Darius SBTW", "DariusSBTW")
+		DConfig:addParam("active", "SBTW", SCRIPT_PARAM_ONKEYDOWN, true, hotKey)
+		DConfig:addParam("useult", "Use Ult In Combo", SCRIPT_PARAM_ONOFF, false)
+		DConfig:permaShow("active")
+		ts.name = "Darius"
+		DConfig:addTS(ts)
+		--PrintChat(">> Auto Darius loaded! Press shift to configure.")
+	end
+	
+	function OnTick()
+		ts:update()
+		QReady = (myHero:CanUseSpell(_Q) == READY)
+		WReady = (myHero:CanUseSpell(_W) == READY)
+		EReady = (myHero:CanUseSpell(_E) == READY)
+		RReady = (myHero:CanUseSpell(_R) == READY)
+		if DConfig.active and ts.target ~= nil then
+			QinRange = (GetDistance(ts.target) < 425 and GetDistance(ts.target) > 270)
+			WinRange = (GetDistance(ts.target) < 145)
+			EinRange = (GetDistance(ts.target) < 425)
+			RinRange = (GetDistance(ts.target) < 475)
+			if QReady and QinRange then CastSpell(_Q) end
+			if EReady and EinRange then
+				CastSpell(_E, ts.target.x, ts.target.z)
+				NextAction = GetTickCount() + myHero.attackSpeed*1000
+				UltTick = GetTickCount() + myHero.attackSpeed*3000
+			end
+			if GetTickCount() > NextAction then
+				if WReady and WinRange then CastSpell(_W) end
+			end
+			if GetTickCount() > UltTick and RReady and RinRange and DConfig.useult then CastSpell(_R,ts.target) end
+			player:Attack(ts.target)
+		end
+	end
+	
+	function OnDraw()
+		--SC__OnDraw()
+			if ts ~= nil and ts.target ~= nil then
+				for j=0, 10 do
+					DrawCircle(ts.target.x, ts.target.y, ts.target.z, (GetDistance(ts.target.minBBox, ts.target.maxBBox)/2) + j*1.5, 0x660066)
+					--DrawCircle(ts.target.x, ts.target.y, ts.target.z, 40 + j*1.5, 0x660066) -- purpleish -- changed from 0x00FF00
+				end
+			end
+	end
+
+	function OnWndMsg(msg,key)
+		--SC__OnWndMsg(msg,key)
+	end
+
+	function OnSendChat(msg)
+		--TargetSelector__OnSendChat(msg)
+		ts:OnSendChat(msg, "pri")
+	end
+	
+end
